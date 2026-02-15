@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemini API Manager</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{
+  border:"hsl(0 0% 89.8%)",input:"hsl(0 0% 89.8%)",ring:"hsl(0 0% 3.9%)",
+  background:"hsl(0 0% 100%)",foreground:"hsl(0 0% 3.9%)",
+  primary:{DEFAULT:"hsl(0 0% 9%)",foreground:"hsl(0 0% 98%)"},
+  secondary:{DEFAULT:"hsl(0 0% 96.1%)",foreground:"hsl(0 0% 9%)"},
+  muted:{DEFAULT:"hsl(0 0% 96.1%)",foreground:"hsl(0 0% 45.1%)"},
+  destructive:{DEFAULT:"hsl(0 84.2% 60.2%)",foreground:"hsl(0 0% 98%)"},
+  accent:{DEFAULT:"hsl(0 0% 96.1%)",foreground:"hsl(0 0% 9%)"},
+}}}}
+</script>
+<style>
+@keyframes slide-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.animate-slide-up{animation:slide-up .3s ease-out}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:0.375rem;font-size:0.875rem;font-weight:500;transition:all .15s;cursor:pointer;border:none;outline:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:hsl(0 0% 9%);color:hsl(0 0% 98%);padding:0.5rem 1rem}
+.btn-primary:hover{background:hsl(0 0% 20%)}
+.btn-outline{border:1px solid hsl(0 0% 89.8%);background:transparent;color:hsl(0 0% 9%);padding:0.5rem 1rem}
+.btn-outline:hover{background:hsl(0 0% 96.1%)}
+.btn-destructive{background:hsl(0 84.2% 60.2%);color:white;padding:0.5rem 1rem}
+.btn-destructive:hover{background:hsl(0 84.2% 50%)}
+.btn-ghost{background:transparent;color:hsl(0 0% 9%);padding:0.5rem 1rem}
+.btn-ghost:hover{background:hsl(0 0% 96.1%)}
+.btn-sm{padding:0.25rem 0.75rem;font-size:0.75rem;height:1.75rem}
+.input{display:flex;height:2.5rem;width:100%;border-radius:0.375rem;border:1px solid hsl(0 0% 89.8%);background:white;padding:0.5rem 0.75rem;font-size:0.875rem;outline:none;transition:all .15s}
+.input:focus{border-color:hsl(0 0% 3.9%);box-shadow:0 0 0 2px hsla(0,0%,3.9%,0.1)}
+.textarea{display:flex;width:100%;border-radius:0.375rem;border:1px solid hsl(0 0% 89.8%);background:white;padding:0.5rem 0.75rem;font-size:0.875rem;outline:none;transition:all .15s;resize:vertical}
+.textarea:focus{border-color:hsl(0 0% 3.9%);box-shadow:0 0 0 2px hsla(0,0%,3.9%,0.1)}
+.card{background:white;border:1px solid hsl(0 0% 89.8%);border-radius:0.5rem}
+.badge{display:inline-flex;align-items:center;border-radius:9999px;padding:0.125rem 0.625rem;font-size:0.75rem;font-weight:500}
+</style>
+</head>
+<body class="h-full bg-background text-foreground antialiased">
+
+<!-- ========== 登录页 ========== -->
+<div id="loginPage" class="flex min-h-full flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold">Gemini API</h1>
+      <p class="mt-2 text-sm text-muted-foreground">管理员控制台</p>
+    </div>
+  </div>
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-background py-8 px-4 sm:px-10 rounded-lg">
+      <form id="loginForm" class="space-y-6" onsubmit="return doLogin(event)">
+        <div class="space-y-2">
+          <label class="text-sm font-medium">密码</label>
+          <input type="password" id="loginPwd" class="input" placeholder="请输入管理密码 (默认: admin)">
+        </div>
+        <button type="submit" class="btn btn-primary w-full h-10">登 录</button>
+      </form>
+      <div class="mt-6 text-center text-xs text-muted-foreground">
+        <p>Gemini API Manager © 2025</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 主应用 ========== -->
+<div id="app" class="hidden min-h-full">
+  <!-- 顶部导航 -->
+  <header class="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
+      <h1 class="text-lg font-semibold">Gemini API Manager</h1>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost btn-sm" onclick="logout()">退出登录</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6" id="statsCards"></div>
+
+    <!-- Tab 导航 -->
+    <div class="border-b border-border mb-6">
+      <nav class="flex gap-0 -mb-px">
+        <button id="tabAccounts" onclick="switchTab('accounts')" class="px-4 py-2.5 text-sm font-medium border-b-2 border-primary text-primary transition-colors">账号管理</button>
+        <button id="tabApi" onclick="switchTab('api')" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors">API 信息</button>
+        <button id="tabSettings" onclick="switchTab('settings')" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors">系统设置</button>
+      </nav>
+    </div>
+
+    <!-- ===== 账号管理面板 ===== -->
+    <div id="panelAccounts">
+      <div class="card">
+        <div class="flex items-center justify-between p-4 border-b border-border">
+          <div>
+            <h3 class="font-semibold">账号列表</h3>
+            <p class="text-sm text-muted-foreground mt-0.5">管理 Google Gemini 账号的 Cookie</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 添加账号</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-border">
+                <th class="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">名称</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">Cookie</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">代理</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">状态</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">有效期</th>
+                <th class="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">请求数</th>
+                <th class="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">操作</th>
+              </tr>
+            </thead>
+            <tbody id="accountsBody"></tbody>
+          </table>
+        </div>
+        <div id="noAccounts" class="hidden p-12 text-center">
+          <div class="text-muted-foreground">
+            <svg class="mx-auto h-12 w-12 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            <p class="text-sm">暂无账号</p>
+            <p class="text-xs mt-1">点击上方「添加账号」按钮开始</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== API 信息面板 ===== -->
+    <div id="panelApi" class="hidden space-y-4">
+      <div class="card p-6 space-y-5">
+        <div>
+          <h3 class="font-semibold mb-1">API 使用说明</h3>
+          <p class="text-sm text-muted-foreground">本服务提供 OpenAI 兼容的 API 接口，可直接对接支持 OpenAI API 的客户端。</p>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium">API 地址</label>
+          <div class="rounded-md border border-border p-3 bg-muted/30 font-mono text-sm break-all" id="apiUrlDisplay"></div>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium">API Key</label>
+          <div class="rounded-md border border-border p-3 bg-muted/30 font-mono text-sm break-all" id="apiKeyDisplay"></div>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium">可用模型</label>
+          <div class="rounded-md border border-border p-3 bg-muted/30 font-mono text-xs space-y-1">
+            <div>unspecified <span class="text-muted-foreground">- 默认模型</span></div>
+            <div>gemini-3.0-pro <span class="text-muted-foreground">- Gemini 3.0 Pro</span></div>
+            <div>gemini-3.0-flash <span class="text-muted-foreground">- Gemini 3.0 Flash</span></div>
+            <div>gemini-3.0-flash-thinking <span class="text-muted-foreground">- Gemini 3.0 Flash Thinking</span></div>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm font-medium">curl 示例</label>
+          <pre class="rounded-md border border-border p-3 bg-muted/30 font-mono text-xs overflow-x-auto whitespace-pre-wrap" id="curlExample"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 系统设置面板 ===== -->
+    <div id="panelSettings" class="hidden space-y-4">
+      <div class="card p-6">
+        <h3 class="font-semibold mb-4">基本设置</h3>
+        <div class="space-y-4 max-w-lg">
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">管理密码</label>
+            <input type="text" id="cfgPassword" class="input">
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">API Key</label>
+            <input type="text" id="cfgApiKey" class="input font-mono">
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">默认模型</label>
+            <select id="cfgModel" class="input">
+              <option value="unspecified">unspecified</option>
+              <option value="gemini-3.0-pro">gemini-3.0-pro</option>
+              <option value="gemini-3.0-flash">gemini-3.0-flash</option>
+              <option value="gemini-3.0-flash-thinking">gemini-3.0-flash-thinking</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">Token 有效期（小时）</label>
+            <input type="number" id="cfgTokenExpiry" class="input" min="0" step="1">
+            <p class="text-xs text-muted-foreground">设为 0 表示永不过期</p>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">连续失败自动禁用阈值</label>
+            <input type="number" id="cfgMaxFailures" class="input" min="0" step="1">
+            <p class="text-xs text-muted-foreground">连续请求失败达到此次数后自动禁用账号，设为 0 表示不自动禁用</p>
+          </div>
+          <button class="btn btn-primary" onclick="saveConfig()">保存设置</button>
+        </div>
+      </div>
+
+      <!-- 插件连接配置 -->
+      <div class="card p-6">
+        <h3 class="font-semibold mb-4">插件连接配置</h3>
+        <div class="space-y-4 max-w-2xl">
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">连接接口</label>
+            <div class="flex gap-2">
+              <input type="text" id="pluginUrl" class="input font-mono flex-1" readonly>
+              <button class="btn btn-outline shrink-0" onclick="copyText('pluginUrl')">复制</button>
+            </div>
+            <p class="text-xs text-muted-foreground">Chrome扩展插件需要配置此接口地址</p>
+          </div>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">连接Token</label>
+            <div class="flex gap-2">
+              <input type="text" id="pluginToken" class="input font-mono flex-1">
+              <button class="btn btn-outline shrink-0" onclick="randomPluginToken()">随机</button>
+              <button class="btn btn-outline shrink-0" onclick="copyText('pluginToken')">复制</button>
+            </div>
+            <p class="text-xs text-muted-foreground">用于验证Chrome扩展插件的身份，留空将自动生成随机token</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="pluginAutoEnable" class="h-4 w-4 rounded border-border">
+            <label for="pluginAutoEnable" class="text-sm font-medium">更新token时自动启用</label>
+          </div>
+          <p class="text-xs text-muted-foreground -mt-2">当插件更新token时，如果该token被禁用，则自动启用它</p>
+          <div class="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <p class="text-sm text-blue-800">ℹ️ 使用说明：安装Chrome扩展后，将连接接口和Token配置到插件中，插件会自动提取Google Gemini的cookie并更新到系统</p>
+          </div>
+          <button class="btn btn-primary w-full sm:w-auto" onclick="savePluginConfig()">保存配置</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ========== 添加账号弹窗 ========== -->
+<div id="addModal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeAddModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-background rounded-lg shadow-lg w-full max-w-md relative border border-border">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold">添加账号</h3>
+        <p class="text-sm text-muted-foreground mt-1">填入从浏览器获取的 Cookie 信息</p>
+      </div>
+      <div class="px-6 pb-2 space-y-4">
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">账号名称</label>
+          <input type="text" id="addName" class="input" placeholder="例如：账号1">
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">__Secure-1PSID <span class="text-destructive">*</span></label>
+          <textarea id="addPsid" class="textarea" rows="3" placeholder="从浏览器 Cookie 中复制"></textarea>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">__Secure-1PSIDTS</label>
+          <textarea id="addPsidts" class="textarea" rows="2" placeholder="可选，从浏览器 Cookie 中复制"></textarea>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">代理地址</label>
+          <input type="text" id="addProxy" class="input" placeholder="可选，例如：http://127.0.0.1:7890">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-6 pt-4">
+        <button class="btn btn-outline" onclick="closeAddModal()">取消</button>
+        <button class="btn btn-primary" id="addBtn" onclick="addAccount()">添加</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 编辑账号弹窗 ========== -->
+<div id="editModal" class="hidden fixed inset-0 z-50">
+  <div class="fixed inset-0 bg-black/50" onclick="closeEditModal()"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-background rounded-lg shadow-lg w-full max-w-md relative border border-border">
+      <div class="p-6">
+        <h3 class="text-lg font-semibold">编辑账号</h3>
+        <p class="text-sm text-muted-foreground mt-1">更新 Cookie 或代理信息</p>
+      </div>
+      <div class="px-6 pb-2 space-y-4">
+        <input type="hidden" id="editId">
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">账号名称</label>
+          <input type="text" id="editName" class="input">
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">__Secure-1PSID</label>
+          <textarea id="editPsid" class="textarea" rows="3"></textarea>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">__Secure-1PSIDTS</label>
+          <textarea id="editPsidts" class="textarea" rows="2"></textarea>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium">代理地址</label>
+          <input type="text" id="editProxy" class="input">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-6 pt-4">
+        <button class="btn btn-outline" onclick="closeEditModal()">取消</button>
+        <button class="btn btn-primary" onclick="updateAccount()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const TOKEN_KEY='gemini_mgr_token';
+let token=localStorage.getItem(TOKEN_KEY)||'';
+let allAccounts=[];
+
+function api(method,url,body){
+  const opts={method,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`}};
+  if(body)opts.body=JSON.stringify(body);
+  return fetch(url,opts).then(r=>{if(r.status===401){logout();throw new Error('未授权')}return r.json()});
+}
+
+function showToast(m,t='info'){
+  const d=document.createElement('div');
+  const bc={success:'bg-green-600',error:'bg-destructive',info:'bg-primary'};
+  d.className=`fixed bottom-4 right-4 ${bc[t]||bc.info} text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium z-[100] animate-slide-up max-w-sm`;
+  d.textContent=m;document.body.appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .3s';setTimeout(()=>d.parentNode&&document.body.removeChild(d),300)},2500);
+}
+
+// ===== 登录 =====
+async function doLogin(e){
+  e.preventDefault();
+  const pwd=$('loginPwd').value;
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+    const d=await r.json();
+    if(d.ok){token=d.token;localStorage.setItem(TOKEN_KEY,token);showApp();showToast('登录成功','success')}
+    else showToast(d.error||'登录失败','error');
+  }catch(e){showToast('连接失败','error')}
+  return false;
+}
+
+function logout(){
+  if(!confirm('确定要退出登录吗？'))return;
+  token='';localStorage.removeItem(TOKEN_KEY);location.reload();
+}
+
+function showApp(){
+  $('loginPage').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  loadStats();loadAccounts();loadConfig();
+}
+
+// ===== Tab 切换 =====
+function switchTab(t){
+  const tabs={accounts:'Accounts',api:'Api',settings:'Settings'};
+  Object.keys(tabs).forEach(n=>{
+    const active=n===t;
+    $(`panel${tabs[n]}`).classList.toggle('hidden',!active);
+    $(`tab${tabs[n]}`).classList.toggle('border-primary',active);
+    $(`tab${tabs[n]}`).classList.toggle('text-primary',active);
+    $(`tab${tabs[n]}`).classList.toggle('border-transparent',!active);
+    $(`tab${tabs[n]}`).classList.toggle('text-muted-foreground',!active);
+  });
+  if(t==='settings')loadConfig();
+}
+
+// ===== 统计 =====
+async function loadStats(){
+  const d=await api('GET','/api/stats');
+  $('statsCards').innerHTML=`
+    <div class="card p-4"><div class="text-sm text-muted-foreground">总账号数</div><div class="text-2xl font-bold mt-1">${d.total}</div></div>
+    <div class="card p-4"><div class="text-sm text-muted-foreground">活跃账号</div><div class="text-2xl font-bold mt-1 ${d.active>0?'text-green-600':''}">${d.active}</div></div>
+    <div class="card p-4"><div class="text-sm text-muted-foreground">已过期/禁用</div><div class="text-2xl font-bold mt-1 ${(d.expired+d.disabled)>0?'text-orange-500':''}">${d.expired+(d.disabled||0)}</div></div>
+    <div class="card p-4"><div class="text-sm text-muted-foreground">总请求数</div><div class="text-2xl font-bold mt-1">${d.total_requests}</div></div>`;
+}
+
+// ===== 账号列表 =====
+function formatRemaining(seconds){
+  if(seconds===-2)return '<span class="text-green-600 font-medium">永不过期</span>';
+  if(seconds<0)return '<span class="text-muted-foreground">-</span>';
+  if(seconds<=0)return '<span class="text-red-500 font-medium">已过期</span>';
+  const h=Math.floor(seconds/3600);
+  const m=Math.floor((seconds%3600)/60);
+  if(h>6)return `<span class="text-green-600 font-medium">${h}时${m}分</span>`;
+  if(h>1)return `<span class="text-yellow-600 font-medium">${h}时${m}分</span>`;
+  return `<span class="text-red-500 font-medium">${h}时${m}分</span>`;
+}
+
+async function loadAccounts(){
+  const list=await api('GET','/api/accounts');
+  allAccounts=list;
+  const tb=$('accountsBody');
+  const noAcc=$('noAccounts');
+  if(!list.length){tb.innerHTML='';noAcc.classList.remove('hidden');return}
+  noAcc.classList.add('hidden');
+  tb.innerHTML=list.map(a=>{
+    const statusCls={active:'bg-green-50 text-green-700',error:'bg-red-50 text-red-700',expired:'bg-orange-50 text-orange-700',pending:'bg-yellow-50 text-yellow-700',disabled:'bg-gray-100 text-gray-500',auto_disabled:'bg-purple-50 text-purple-700'};
+    const statusText={active:'正常',error:'异常',expired:'已过期',pending:'等待中',disabled:'已禁用',auto_disabled:'自动禁用'};
+    const cls=statusCls[a.enabled?(a.status==='disabled'?'auto_disabled':a.status):'disabled']||statusCls.pending;
+    const txt=a.enabled?(a.status==='disabled'?'自动禁用':(statusText[a.status]||a.status)):'已禁用';
+    const remaining=a.token_remaining!=null?a.token_remaining:-1;
+    return `<tr class="border-b border-border hover:bg-muted/50 transition-colors">
+      <td class="py-2.5 px-4"><span class="font-medium text-sm">${a.name}</span></td>
+      <td class="py-2.5 px-4"><span class="font-mono text-xs text-muted-foreground">${a.psid}</span></td>
+      <td class="py-2.5 px-4"><span class="text-xs text-muted-foreground">${a.proxy||'-'}</span></td>
+      <td class="py-2.5 px-4">
+        <span class="badge ${cls}">${txt}</span>
+        ${a.error&&a.enabled?`<div class="text-xs text-destructive mt-1 max-w-[200px] truncate" title="${a.error}">${a.error}</div>`:''}
+      </td>
+      <td class="py-2.5 px-4 text-sm">${formatRemaining(remaining)}</td>
+      <td class="py-2.5 px-4 text-sm">${a.request_count||0}</td>
+      <td class="py-2.5 px-4 text-right">
+        <div class="flex items-center justify-end gap-1">
+          <button class="btn btn-ghost btn-sm" onclick="refreshAcc('${a.id}')" title="刷新">🔄</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${a.id}')" title="编辑">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAcc('${a.id}')" title="${a.enabled?'禁用':'启用'}">${a.enabled?'⏸️':'▶️'}</button>
+          <button class="btn btn-ghost btn-sm text-destructive" onclick="removeAcc('${a.id}')" title="删除">🗑️</button>
+        </div>
+      </td>
+    </tr>`}).join('');
+}
+</script>
+
+<script>
+// ===== 配置 =====
+async function loadConfig(){
+  const c=await api('GET','/api/config');
+  $('cfgPassword').value=c.admin_password||'';
+  $('cfgApiKey').value=c.api_key||'';
+  $('cfgModel').value=c.model||'unspecified';
+  $('cfgTokenExpiry').value=c.token_expiry_hours!=null?c.token_expiry_hours:24;
+  $('cfgMaxFailures').value=c.max_consecutive_failures!=null?c.max_consecutive_failures:3;
+  $('apiUrlDisplay').textContent=`${location.origin}/v1/chat/completions`;
+  $('apiKeyDisplay').textContent=c.api_key||'';
+  $('curlExample').textContent=`curl -X POST ${location.origin}/v1/chat/completions \\
+  -H "Authorization: Bearer ${c.api_key}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "gemini-3.0-flash",
+    "messages": [{"role": "user", "content": "你好"}],
+    "stream": false
+  }'`;
+  // 加载插件配置
+  loadPluginConfig();
+}
+
+async function loadPluginConfig(){
+  try{
+    const d=await api('GET','/api/plugin/config');
+    if(d.success&&d.config){
+      $('pluginUrl').value=`${location.origin}${d.config.connection_url}`;
+      $('pluginToken').value=d.config.connection_token||'';
+      $('pluginAutoEnable').checked=d.config.auto_enable_on_update!==false;
+    }
+  }catch(e){console.error('加载插件配置失败:',e)}
+}
+
+async function savePluginConfig(){
+  try{
+    await api('POST','/api/plugin/config',{
+      connection_token:$('pluginToken').value.trim(),
+      auto_enable_on_update:$('pluginAutoEnable').checked,
+    });
+    showToast('插件配置保存成功','success');
+    loadPluginConfig();
+  }catch(e){showToast('保存失败: '+e.message,'error')}
+}
+
+function randomPluginToken(){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let t='';for(let i=0;i<32;i++)t+=chars.charAt(Math.floor(Math.random()*chars.length));
+  $('pluginToken').value=t;
+  showToast('随机Token已生成','success');
+}
+
+function copyText(id){
+  const val=$(id).value;
+  if(!val){showToast('内容为空','error');return}
+  navigator.clipboard.writeText(val).then(()=>showToast('已复制到剪贴板','success')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=val;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    showToast('已复制到剪贴板','success');
+  });
+}
+
+async function saveConfig(){
+  await api('POST','/api/config',{
+    admin_password:$('cfgPassword').value,
+    api_key:$('cfgApiKey').value,
+    model:$('cfgModel').value,
+    token_expiry_hours:parseInt($('cfgTokenExpiry').value)||0,
+    max_consecutive_failures:parseInt($('cfgMaxFailures').value)||0,
+  });
+  showToast('配置保存成功','success');
+  loadConfig();
+}
+
+// ===== 添加账号 =====
+function openAddModal(){$('addModal').classList.remove('hidden')}
+function closeAddModal(){$('addModal').classList.add('hidden')}
+
+async function addAccount(){
+  const psid=$('addPsid').value.trim();
+  if(!psid){showToast('请输入 __Secure-1PSID','error');return}
+  const btn=$('addBtn');btn.disabled=true;btn.textContent='添加中...';
+  try{
+    await api('POST','/api/accounts',{
+      name:$('addName').value.trim(),
+      psid:psid,
+      psidts:$('addPsidts').value.trim(),
+      proxy:$('addProxy').value.trim(),
+    });
+    closeAddModal();
+    $('addName').value='';$('addPsid').value='';$('addPsidts').value='';$('addProxy').value='';
+    showToast('账号添加成功，正在初始化...','success');
+    setTimeout(()=>{loadAccounts();loadStats()},2000);
+  }catch(e){showToast('添加失败: '+e.message,'error')}
+  finally{btn.disabled=false;btn.textContent='添加'}
+}
+
+// ===== 编辑账号 =====
+function openEditModal(id){
+  const acc=allAccounts.find(a=>a.id===id);
+  if(!acc)return;
+  $('editId').value=id;
+  $('editName').value=acc.name||'';
+  $('editPsid').value='';
+  $('editPsidts').value='';
+  $('editProxy').value=acc.proxy||'';
+  $('editModal').classList.remove('hidden');
+}
+function closeEditModal(){$('editModal').classList.add('hidden')}
+
+async function updateAccount(){
+  const id=$('editId').value;
+  const data={name:$('editName').value.trim(),proxy:$('editProxy').value.trim()};
+  const psid=$('editPsid').value.trim();
+  const psidts=$('editPsidts').value.trim();
+  if(psid)data.psid=psid;
+  if(psidts)data.psidts=psidts;
+  try{
+    await api('POST',`/api/accounts/${id}/update`,data);
+    closeEditModal();
+    showToast('更新成功','success');
+    loadAccounts();loadStats();
+  }catch(e){showToast('更新失败: '+e.message,'error')}
+}
+
+// ===== 账号操作 =====
+async function removeAcc(id){
+  if(!confirm('确定要删除这个账号吗？'))return;
+  await api('DELETE',`/api/accounts/${id}`);
+  showToast('删除成功','success');
+  loadAccounts();loadStats();
+}
+
+async function toggleAcc(id){
+  await api('POST',`/api/accounts/${id}/toggle`);
+  showToast('状态已更新','success');
+  loadAccounts();loadStats();
+}
+
+async function refreshAcc(id){
+  showToast('正在刷新...','info');
+  await api('POST',`/api/accounts/${id}/refresh`);
+  setTimeout(()=>{loadAccounts();loadStats()},3000);
+}
+
+// ===== 初始化 =====
+let refreshTimer=null;
+if(token){
+  api('GET','/api/stats').then(()=>{showApp();startAutoRefresh()}).catch(()=>{token='';localStorage.removeItem(TOKEN_KEY)});
+}
+function startAutoRefresh(){
+  if(refreshTimer)clearInterval(refreshTimer);
+  refreshTimer=setInterval(()=>{loadAccounts();loadStats()},60000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "db8ea676",
+    "name": "1",
+    "psid": "g.a0006gjXxCMfoDY8wkLpszfK9hhELt8WL02YD8oL2Y7_oMXS8GYaLTbfRyRcIkSEX8Qi-znGggACgYKATMSARQSFQHGX2MiDg1uHo-CRnesEJXnuhgWqxoVAUF8yKol5uv4e3MUjMhO3p96qUMY0076",
+    "psidts": "sidts-CjIB7I_69DmQolz50H6IAgw-3MFLE5FC83tMZMKYpfbD-rhwR2yP9vy-ZVAyckug2GB5shAA",
+    "proxy": "http://127.0.0.1:7890",
+    "enabled": true,
+    "status": "error",
+    "error": "All connection attempts failed",
+    "created_at": "2026-02-14T15:55:23.268710",
+    "token_updated_at": "2026-02-14T15:55:23.268710",
+    "last_check": "2026-02-15T03:02:11.677257",
+    "request_count": 5
+  }
+]

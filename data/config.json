@@ -1,0 +1,7 @@
+{
+  "admin_password": "admin",
+  "api_key": "bccfb443",
+  "model": "gemini-3.0-flash",
+  "plugin_token": "ace51aeb7dd04fde8f4e38a2f3dba388",
+  "plugin_auto_enable": true
+}

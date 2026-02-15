@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.DS_Store
+.env
+.temp
+assets
+tests
+example.py
+README.md
+LICENSE

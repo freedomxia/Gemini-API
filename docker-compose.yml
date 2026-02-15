@@ -1,0 +1,12 @@
+services:
+  gemini-api:
+    build: .
+    container_name: gemini-api
+    ports:
+      - "${PORT:-9903}:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=8000
+      - GEMINI_COOKIE_PATH=/app/data/cookies
+    restart: unless-stopped

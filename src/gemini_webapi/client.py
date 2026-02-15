@@ -368,14 +368,17 @@ class GeminiClient(GemMixin):
             ]
 
         try:
-            await self._batch_execute(
-                [
-                    RPCData(
-                        rpcid=GRPC.BARD_ACTIVITY,
-                        payload='[[["bard_activity_enabled"]]]',
-                    )
-                ]
-            )
+            try:
+                await self._batch_execute(
+                    [
+                        RPCData(
+                            rpcid=GRPC.BARD_ACTIVITY,
+                            payload='[[["bard_activity_enabled"]]]',
+                        )
+                    ]
+                )
+            except Exception:
+                pass  # Non-critical pre-request, safe to skip
 
             session_state = {
                 "last_texts": {},
@@ -482,14 +485,17 @@ class GeminiClient(GemMixin):
             ]
 
         try:
-            await self._batch_execute(
-                [
-                    RPCData(
-                        rpcid=GRPC.BARD_ACTIVITY,
-                        payload='[[["bard_activity_enabled"]]]',
-                    )
-                ]
-            )
+            try:
+                await self._batch_execute(
+                    [
+                        RPCData(
+                            rpcid=GRPC.BARD_ACTIVITY,
+                            payload='[[["bard_activity_enabled"]]]',
+                        )
+                    ]
+                )
+            except Exception:
+                pass  # Non-critical pre-request, safe to skip
 
             session_state = {
                 "last_texts": {},
